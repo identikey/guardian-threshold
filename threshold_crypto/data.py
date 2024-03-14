@@ -1,5 +1,5 @@
 import base64
-import collections
+from collections.abc import Mapping
 import json
 from typing import Iterable, List, Any, Dict
 
@@ -27,7 +27,7 @@ def _is_ecc_point_list(value):
 
 
 def _is_serialized_ecc_point(value):
-    return isinstance(value, collections.Mapping) and "x" in value and "y" in value and "curve" in value
+    return isinstance(value, Mapping) and "x" in value and "y" in value and "curve" in value
 
 
 def _is_serialized_ecc_point_list(value):
