@@ -9,9 +9,14 @@ repository = "https://github.com/tompetersen/threshold-crypto"
 keywords = ["elgamal", "threshold", "decryption"]
 
 [tool.poetry.dependencies]
-python = "^3.6"
+python = ">=3.8,<4.0"
 pynacl = "^1.4.0"
-pycryptodome = "^3.18.0"  # Add this line
+pycryptodome = "^3.18.0"
+fastapi = "^0.95.1"
+uvicorn = "^0.22.0"
+SQLAlchemy = "^1.4"
+alembic = "^1.13.3"
+black = "^24.8.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
@@ -19,3 +24,5 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 threshold-crypto-cli = "identikey.cli:main"
+start-api = "uvicorn.main:app --reload"
+alembic = "alembic.config:main"
