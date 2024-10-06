@@ -24,5 +24,5 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 threshold-crypto-cli = "identikey.cli:main"
-start-api = "uvicorn.main:app --reload"
+start = "main:start"
 alembic = "alembic.config:main"
