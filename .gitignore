@@ -18,5 +18,4 @@ tmp
 
 eval/eval-*
 
-
-threshold.db
+*.db

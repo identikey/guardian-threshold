@@ -2,6 +2,7 @@ import threshold_crypto as tc
 from threshold_crypto import participant
 from threshold_crypto import central
 from threshold_crypto.data import CurveParameters, ThresholdParameters
+import random
 
 # Set up parameters
 curve_params = tc.CurveParameters()
@@ -18,7 +19,14 @@ cp = CurveParameters()
 message = "Some secret message!!!!!"
 
 
-participant_ids = list(range(1, tp.n + 1))
+# Generate random integer IDs for participants
+def generate_random_id():
+    return random.randint(10 ** (tp.n - 1), (10**tp.n) - 1)
+
+
+participant_ids = [generate_random_id() for _ in range(tp.n)]
+print(participant_ids)
+
 participants = [
     participant.Participant(id, participant_ids, cp, tp) for id in participant_ids
 ]
