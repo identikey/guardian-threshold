@@ -11,4 +11,4 @@ class Participant(Base):
     open_commitment = Column(String)
     closed_commitment = Column(String)
     key_share = Column(String)
-    is_self = Column(Boolean)
+    is_self = Column(Boolean, default=False)

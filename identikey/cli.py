@@ -2,6 +2,8 @@ import argparse
 import os  # Import os to set environment variables
 from main import start
 import threshold_crypto as tc
+import subprocess
+from identikey.dkg_orchestrator import perform_dkg  # Add this import
 
 
 def main():
@@ -27,11 +29,9 @@ def main():
 
     dkg_parser = subparsers.add_parser("dkg", help="Distributed Key Generation")
     dkg_parser.add_argument(
-        "--url",
-        "-u",
+        "urls",
         type=str,
         nargs="+",
-        required=True,
         help="Participant URLs for DKG",
     )
 
@@ -53,13 +53,25 @@ def main():
         help="Database file to use",
     )
 
+    # Add migrate command
+    migrate_parser = subparsers.add_parser("migrate", help="Run database migrations")
+    migrate_parser.add_argument(
+        "--db",
+        type=str,
+        default="test.db",
+        help="Database file to migrate",
+    )
+    migrate_parser.add_argument(
+        "alembic_args",
+        nargs=argparse.REMAINDER,
+        help="Additional arguments to pass to Alembic",
+    )
+
     args = parser.parse_args()
 
     if args.command == "dkg":
         print("Distributed Key Generation")
-        print(args.url)
-        # Perform DKG orchestration without starting the server
-        # perform_dkg(args.url)
+        perform_dkg(args.urls)
     elif args.command == "encrypt":
         # Example parameter generation
         curve_params = tc.CurveParameters()
@@ -94,10 +106,12 @@ def main():
         print(f"Decrypted message: {decrypted_message}")
 
     elif args.command == "run-server":
-        print("Running server")
-        os.environ["DATABASE_URL"] = f"sqlite:///./{args.db}"  # Set the DATABASE_URL
-        os.environ["APP_PORT"] = str(args.port)
-        start(port=args.port)
+        start(port=args.port, db_file=args.db)
+
+    elif args.command == "migrate":
+        db_url = f"sqlite:///./{args.db}"
+        alembic_command = ["alembic", "-x", f"db_file={db_url}"] + args.alembic_args
+        subprocess.run(alembic_command)
 
 
 def retrieve_share(index):
