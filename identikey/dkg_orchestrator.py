@@ -1,6 +1,7 @@
+import json
 import requests
 import logging
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -46,6 +47,23 @@ def generate_closed_commitments(participant_urls: List[str], t: int, n: int):
     return commitments
 
 
+def distribute_closed_commitments(
+    participants: List[Tuple[str, str]], commitments: List[Dict[str, str]]
+):
+    logger.info(f"Distributing closed commitments to {len(participants)} participants")
+    logger.info(commitments)
+    for _, url in participants:
+        try:
+            response = requests.post(
+                f"{url}/receive_closed_commitments",
+                json={"commitments": [json.loads(c) for c in commitments]},
+            )
+            response.raise_for_status()
+            logger.info(f"Closed commitments sent to {url}")
+        except requests.RequestException as e:
+            logger.error(f"Failed to send closed commitments to {url}: {e}")
+
+
 def perform_dkg(participant_urls: List[str], t: int, n: int):
     logger.info(f"Starting DKG with {n} participants, threshold {t}")
 
@@ -58,6 +76,8 @@ def perform_dkg(participant_urls: List[str], t: int, n: int):
     register_participants(participants, t, n)
 
     closed_commitments = generate_closed_commitments(participant_urls, t, n)
-    print(closed_commitments)
+
+    # Distribute closed commitments to all participants
+    distribute_closed_commitments(participants, closed_commitments)
 
     logger.info("DKG orchestration completed")

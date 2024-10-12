@@ -6,9 +6,11 @@ from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 from database import init_db
 import models
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import threshold_crypto as tc
 from threshold_crypto.data import CurveParameters, ThresholdParameters
+import base64
+import json
 
 app = FastAPI()
 
@@ -105,7 +107,11 @@ def get_all_participants(
     participants = db.query(models.Participant).all()
     return {
         "participants": [
-            {"participant_id": p.participant_id, "is_self": p.is_self}
+            {
+                "participant_id": p.participant_id,
+                "is_self": p.is_self,
+                "closed_commitment": p.closed_commitment,
+            }
             for p in participants
         ]
     }
@@ -143,6 +149,58 @@ def generate_closed_commitment(
     commitment_json = commitment.to_json()
     logger.info(f"Generated closed commitment: {commitment_json}")
     return {"participant_id": me.participant_id, "commitment": commitment_json}
+
+
+class ClosedCommitment(BaseModel):
+    participant_id: int
+    commitment: str
+
+
+class ClosedCommitmentList(BaseModel):
+    commitments: List[ClosedCommitment]
+
+
+@app.post("/receive_closed_commitments")
+def receive_closed_commitments(
+    commitment_list: ClosedCommitmentList, db: Session = Depends(get_db)
+):
+    for commitment in commitment_list.commitments:
+        # Create a JSON string from the commitment data
+        commitment_json = json.dumps(
+            {
+                "participant_id": commitment.participant_id,
+                "commitment": commitment.commitment,
+            }
+        )
+
+        # Use DkgClosedCommitment.from_json to create the object
+        try:
+            dkg_commitment = tc.data.DkgClosedCommitment.from_json(commitment_json)
+        except Exception as e:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid commitment data for participant {commitment.participant_id}: {str(e)}",
+            )
+
+        # Find the participant and update their closed_commitment
+        participant = (
+            db.query(models.Participant)
+            .filter_by(participant_id=dkg_commitment.participant_id)
+            .first()
+        )
+        if not participant:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Participant {dkg_commitment.participant_id} not found",
+            )
+
+        # Serialize the DkgClosedCommitment object back to JSON string
+        # Improvement: It'd be better to just store the commitment bytes directly.
+        participant.closed_commitment = dkg_commitment.to_json()
+        db.add(participant)
+
+    db.commit()
+    return {"status": "Closed commitments received and stored"}
 
 
 if __name__ == "__main__":
