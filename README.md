@@ -1,12 +1,11 @@
 # Threshold cryptography library
 
-
 A stateless library which offers functionality for ElGamal-based threshold decryption with centralized or distributed key generation.
 
 Threshold decryption means a message can be encrypted using a simple public key, but for decryption at least t out of n
 share owners must collaborate to decrypt the message.
 
-A hybrid approach (using [pynacl](https://pynacl.readthedocs.io) for symmetric encryption and 
+A hybrid approach (using [pynacl](https://pynacl.readthedocs.io) for symmetric encryption and
 [PyCryptodome](https://pycryptodome.readthedocs.io) for ECC operations) is used for message encryption and decryption.
 Therefore there are no limitations regarding message lengths or format. Additionally the integrity of a message is
 secured by using the AE-scheme, meaning changes to some parts of the ciphertext, to partial decryptions or even
@@ -27,7 +26,7 @@ Generate required parameters:
     >>> curve_params = tc.CurveParameters()
     >>> thresh_params = tc.ThresholdParameters(t=3, n=5)
 
-The `CurveParameters` describe the elliptic curve the operations are performed on. 
+The `CurveParameters` describe the elliptic curve the operations are performed on.
 The `ThresholdParameters` determine the number of created shares `n` and the number of required participants for the decryption operation `t`.
 
 ### Centralized Key Generation
@@ -52,7 +51,7 @@ Next each participant broadcasts a closed commitment to a share of the later pub
     >>> for pi in participants:
     ...     for pj in participants:
     ...         if pj != pi:
-    ...             closed_commitment = pj.closed_commmitment()
+    ...             closed_commitment = pj.closed_commitment()
     ...             pi.receive_closed_commitment(closed_commitment)
 
 After each participant has received all closed commitments they broadcast their open commitments:
@@ -129,31 +128,31 @@ A third party computes non-secret values required for the generation of the re-e
 
     >>> t_max = thresh_params.t
     >>> old_indices = [key_share.x for key_share in key_shares][:t_max]
-	>>> new_indices = [key_share.x for key_share in new_key_shares][:t_max]
+    >>> new_indices = [key_share.x for key_share in new_key_shares][:t_max]
 
-	>>> coefficients = []
-	>>> for p in range(1, t_max + 1):
-	...     old_lc = tc.lagrange_coefficient_for_key_share_indices(old_indices, p, curve_params)
-	...     new_lc = tc.lagrange_coefficient_for_key_share_indices(new_indices, p, curve_params)
-	...     coefficients.append((old_lc, new_lc))
-	
- A number of `max(t_old, t_new)` participants now compute their partial re-encryption keys using these non-secret values and his shares:
+    >>> coefficients = []
+    >>> for p in range(1, t_max + 1):
+    ...     old_lc = tc.lagrange_coefficient_for_key_share_indices(old_indices, p, curve_params)
+    ...     new_lc = tc.lagrange_coefficient_for_key_share_indices(new_indices, p, curve_params)
+    ...     coefficients.append((old_lc, new_lc))
 
-	>>> partial_re_enc_keys = []
+A number of `max(t_old, t_new)` participants now compute their partial re-encryption keys using these non-secret values and his shares:
+
+    >>> partial_re_enc_keys = []
     >>> for p in range(t_max):
     ...     old_share = key_shares[p]
     ...     new_share = new_key_shares[p]
     ...     old_lc, new_lc = coefficients[p]
     ...     partial_re_enc_key = tc.compute_partial_re_encryption_key(old_share, old_lc, new_share, new_lc)
     ...     partial_re_enc_keys.append(partial_re_enc_key)
- 
+
 The third party computes the re-encryption key by combining the partial re-encryption keys:
- 
-	>>> re_enc_key = tc.combine_partial_re_encryption_keys(partial_re_enc_keys, pub_key, new_pub_key, thresh_params, thresh_params)
+
+    >>> re_enc_key = tc.combine_partial_re_encryption_keys(partial_re_enc_keys, pub_key, new_pub_key, thresh_params, thresh_params)
 
 The encrypted message is re-encrypted to be decryptable by the new shares:
 
-	>>> new_encrypted_message = tc.re_encrypt_message(encrypted_message, re_enc_key)
+    >>> new_encrypted_message = tc.re_encrypt_message(encrypted_message, re_enc_key)
 
 Decryption can now be performed using the new shares:
 

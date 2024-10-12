@@ -4,14 +4,6 @@ from threshold_crypto import central
 from threshold_crypto.data import CurveParameters, ThresholdParameters
 import random
 
-# Set up parameters
-curve_params = tc.CurveParameters()
-thresh_params = tc.ThresholdParameters(t=3, n=5)
-
-# Generate public key and shares
-# pub_key, key_shares = tc.create_public_key_and_shares_centralized(curve_params, thresh_params)
-
-
 ####### DKG #######
 
 tp = ThresholdParameters(3, 5)
@@ -35,7 +27,7 @@ participants = [
 for pi in participants:
     for pj in participants:
         if pj != pi:
-            closed_commitment = pj.closed_commmitment()
+            closed_commitment = pj.closed_commitment()
             pi.receive_closed_commitment(closed_commitment)
 
 # via broadcast

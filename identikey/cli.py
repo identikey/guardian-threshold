@@ -34,6 +34,19 @@ def main():
         nargs="+",
         help="Participant URLs for DKG",
     )
+    dkg_parser.add_argument(
+        "-t",
+        "--threshold",
+        type=int,
+        required=True,
+        help="Threshold number for DKG",
+    )
+    dkg_parser.add_argument(
+        "-n",
+        "--total",
+        type=int,
+        help="Total number of participants (optional, defaults to number of URLs)",
+    )
 
     # Add run-server command
     run_server_parser = subparsers.add_parser(
@@ -70,8 +83,13 @@ def main():
     args = parser.parse_args()
 
     if args.command == "dkg":
-        print("Distributed Key Generation")
-        perform_dkg(args.urls)
+        n = args.total if args.total is not None else len(args.urls)
+        if n != len(args.urls):
+            raise ValueError("Please pass in a URL for each participant")
+        if args.threshold > n:
+            raise ValueError("Threshold must not exceed the number of participants")
+
+        perform_dkg(args.urls, args.threshold, n)
     elif args.command == "encrypt":
         # Example parameter generation
         curve_params = tc.CurveParameters()
