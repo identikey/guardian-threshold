@@ -12,6 +12,7 @@ class ThresholdCryptoError(Exception):
 
 # helper functions for serializing ECC.EccPoint
 
+
 def _ecc_point_to_serializable(p: ECC.EccPoint) -> Dict[str, Any]:
     return {
         "x": int(p.x),
@@ -27,7 +28,12 @@ def _is_ecc_point_list(value):
 
 
 def _is_serialized_ecc_point(value):
-    return isinstance(value, Mapping) and "x" in value and "y" in value and "curve" in value
+    return (
+        isinstance(value, Mapping)
+        and "x" in value
+        and "y" in value
+        and "curve" in value
+    )
 
 
 def _is_serialized_ecc_point_list(value):
@@ -37,21 +43,24 @@ def _is_serialized_ecc_point_list(value):
 
 
 class ThresholdDataClass:
-    """ Baseclass for ThresholdCrypto data classes. """
+    """Baseclass for ThresholdCrypto data classes."""
+
     BASE64_MAGIC = "BASE64|"
     CURVE_MAGIC = "ECURVE|"
 
     def __init__(self):
-        raise NotImplementedError("Implement __init__ in subclass when using ThresholdDataClass")
+        raise NotImplementedError(
+            "Implement __init__ in subclass when using ThresholdDataClass"
+        )
 
     def to_json(self):
-        """ Create json representation of object. Some special cases are already handled here. """
+        """Create json representation of object. Some special cases are already handled here."""
         data_dict = self.__dict__.copy()
 
         for k, val in data_dict.items():
             # special handling of bytes
             if isinstance(val, bytes):
-                data_dict[k] = self.BASE64_MAGIC + base64.b64encode(val).decode('ascii')
+                data_dict[k] = self.BASE64_MAGIC + base64.b64encode(val).decode("ascii")
 
             # special handling of curve parameters
             if isinstance(val, CurveParameters):
@@ -68,17 +77,17 @@ class ThresholdDataClass:
 
     @classmethod
     def from_json(cls, json_str: str):
-        """ Create object from json representation. Some special cases are already handled here. """
+        """Create object from json representation. Some special cases are already handled here."""
         dict = json.loads(json_str)
 
         for k, val in dict.items():
             # special handling of bytes
             if isinstance(val, str) and val.startswith(cls.BASE64_MAGIC):
-                dict[k] = base64.b64decode(val[len(cls.BASE64_MAGIC):].encode('ascii'))
+                dict[k] = base64.b64decode(val[len(cls.BASE64_MAGIC) :].encode("ascii"))
 
             # special handling of curve parameters
             if isinstance(val, str) and val.startswith(cls.CURVE_MAGIC):
-                dict[k] = CurveParameters(curve_name=val[len(cls.CURVE_MAGIC):])
+                dict[k] = CurveParameters(curve_name=val[len(cls.CURVE_MAGIC) :])
 
             # special handling of curve points
             if _is_serialized_ecc_point(val):
@@ -109,20 +118,22 @@ class ThresholdParameters(ThresholdDataClass):
         :param n: overall number of share owners
         """
         if t > n:
-            raise ThresholdCryptoError('threshold parameter t must be smaller than n')
+            raise ThresholdCryptoError("threshold parameter t must be smaller than n")
         if t <= 0:
-            raise ThresholdCryptoError('threshold parameter t must be greater than 0')
+            raise ThresholdCryptoError("threshold parameter t must be greater than 0")
 
         self.t = t
         self.n = n
 
     def __eq__(self, other):
-        return (isinstance(other, self.__class__) and
-                self.t == other.t and
-                self.n == other.n)
+        return (
+            isinstance(other, self.__class__)
+            and self.t == other.t
+            and self.n == other.n
+        )
 
     def __str__(self):
-        return 'ThresholdParameters ({}, {})'.format(self.t, self.n)
+        return "ThresholdParameters ({}, {})".format(self.t, self.n)
 
 
 class CurveParameters(ThresholdDataClass):
@@ -130,7 +141,8 @@ class CurveParameters(ThresholdDataClass):
     Contains the curve parameters the scheme uses. Since PyCryptodome is used, only curves present there are available:
     https://pycryptodome.readthedocs.io/en/latest/src/public_key/ecc.html
     """
-    DEFAULT_CURVE = 'P-256'
+
+    DEFAULT_CURVE = "P-256"
 
     def __init__(self, curve_name: str = DEFAULT_CURVE):
         """
@@ -139,7 +151,7 @@ class CurveParameters(ThresholdDataClass):
         :param curve_name:
         """
         if curve_name not in ECC._curves:
-            raise ThresholdCryptoError('Unsupported curve: ' + curve_name)
+            raise ThresholdCryptoError("Unsupported curve: " + curve_name)
 
         self._name = curve_name
         self._curve = ECC._curves[curve_name]
@@ -150,14 +162,15 @@ class CurveParameters(ThresholdDataClass):
         return int(self._curve.order)
 
     def to_json(self):
-        return json.dumps({'curve_name': self._name})
+        return json.dumps({"curve_name": self._name})
 
     def __eq__(self, other):
-        return (isinstance(other, self.__class__) and
-                self._curve == other._curve)
+        return isinstance(other, self.__class__) and self._curve == other._curve
 
     def __str__(self):
-        return "Curve {} of order {} with generator point P = {}".format(self._name, self.order, self.P)
+        return "Curve {} of order {} with generator point P = {}".format(
+            self._name, self.order, self.P
+        )
 
 
 class PublicKey(ThresholdDataClass):
@@ -165,7 +178,9 @@ class PublicKey(ThresholdDataClass):
     The public key point Q linked to the (implicit) secret key d of the scheme.
     """
 
-    def __init__(self, Q: ECC.EccPoint, curve_params: CurveParameters = CurveParameters()):
+    def __init__(
+        self, Q: ECC.EccPoint, curve_params: CurveParameters = CurveParameters()
+    ):
         """
         Construct the public key.
 
@@ -176,12 +191,16 @@ class PublicKey(ThresholdDataClass):
         self.curve_params = curve_params
 
     def __eq__(self, other):
-        return (isinstance(other, self.__class__) and
-                self.curve_params == other.curve_params and
-                self.Q == other.Q)
+        return (
+            isinstance(other, self.__class__)
+            and self.curve_params == other.curve_params
+            and self.Q == other.Q
+        )
 
     def __str__(self):
-        return 'Public key point Q = {} (on curve {})'.format(self.Q, self.curve_params._name)
+        return "Public key point Q = {} (on curve {})".format(
+            self.Q, self.curve_params._name
+        )
 
 
 class KeyShare(ThresholdDataClass):
@@ -203,13 +222,17 @@ class KeyShare(ThresholdDataClass):
         self.curve_params = curve_params
 
     def __eq__(self, other):
-        return (isinstance(other, self.__class__) and
-                self.curve_params == other.curve_params and
-                self.x == other.x and
-                self.y == other.y)
+        return (
+            isinstance(other, self.__class__)
+            and self.curve_params == other.curve_params
+            and self.x == other.x
+            and self.y == other.y
+        )
 
     def __str__(self):
-        return 'KeyShare (x,y) = ({}, {}) (on curve {})'.format(self.x, self.y, self.curve_params._name)
+        return "KeyShare (x,y) = ({}, {}) (on curve {})".format(
+            self.x, self.y, self.curve_params._name
+        )
 
 
 class EncryptedMessage(ThresholdDataClass):
@@ -244,13 +267,17 @@ class EncryptedMessage(ThresholdDataClass):
         self.ciphertext = ciphertext
 
     def __eq__(self, other):
-        return (isinstance(other, self.__class__) and
-                self.C1 == other.C1 and
-                self.C2 == other.C2 and
-                self.ciphertext == other.ciphertext)
+        return (
+            isinstance(other, self.__class__)
+            and self.C1 == other.C1
+            and self.C2 == other.C2
+            and self.ciphertext == other.ciphertext
+        )
 
     def __str__(self):
-        return 'EncryptedMessage (C1, C2, ciphertext) = ({}, {}, {}))'.format(self.C1, self.C2, self.ciphertext)
+        return "EncryptedMessage (C1, C2, ciphertext) = ({}, {}, {}))".format(
+            self.C1, self.C2, self.ciphertext
+        )
 
 
 class LagrangeCoefficient(ThresholdDataClass):
@@ -258,7 +285,9 @@ class LagrangeCoefficient(ThresholdDataClass):
     The Lagrange coefficient for a distinct participant used in partial decryption combination and partial re-encryption key combination.
     """
 
-    def __init__(self, participant_index: int, used_index_values: Iterable[int], coefficient: int):
+    def __init__(
+        self, participant_index: int, used_index_values: Iterable[int], coefficient: int
+    ):
         """
         Construct the Lagrange coefficient
 
@@ -271,13 +300,19 @@ class LagrangeCoefficient(ThresholdDataClass):
         self.coefficient = coefficient
 
     def __eq__(self, other):
-        return (isinstance(other, self.__class__) and
-                self.participant_index == other.participant_index and
-                self.used_index_values == other.used_index_values and
-                self.coefficient == other.coefficient)
+        return (
+            isinstance(other, self.__class__)
+            and self.participant_index == other.participant_index
+            and self.used_index_values == other.used_index_values
+            and self.coefficient == other.coefficient
+        )
 
     def __str__(self):
-        return 'LagrangeCoefficient for participant with index {} in group {} : {}'.format(self.participant_index, list(self.used_index_values), self.coefficient)
+        return (
+            "LagrangeCoefficient for participant with index {} in group {} : {}".format(
+                self.participant_index, list(self.used_index_values), self.coefficient
+            )
+        )
 
 
 class PartialDecryption(ThresholdDataClass):
@@ -297,13 +332,17 @@ class PartialDecryption(ThresholdDataClass):
         self.curve_params = curve_params
 
     def __eq__(self, other):
-        return (isinstance(other, self.__class__) and
-                self.x == other.x and
-                self.yC1 == other.yC1 and
-                self.curve_params == other.curve_params)
+        return (
+            isinstance(other, self.__class__)
+            and self.x == other.x
+            and self.yC1 == other.yC1
+            and self.curve_params == other.curve_params
+        )
 
     def __str__(self):
-        return 'PartialDecryption (x, yC1) = ({}, {}) (on curve {})'.format(self.x, self.yC1, self.curve_params._name)
+        return "PartialDecryption (x, yC1) = ({}, {}) (on curve {})".format(
+            self.x, self.yC1, self.curve_params._name
+        )
 
 
 # re-encryption data types
@@ -322,18 +361,22 @@ class PartialReEncryptionKey(ThresholdDataClass):
         :param curve_params: The used curve parameters
         """
         if partial_key < 0 or partial_key > curve_params.order:
-            raise ThresholdCryptoError('Invalid partial key')
+            raise ThresholdCryptoError("Invalid partial key")
 
         self.partial_key = partial_key
         self.curve_params = curve_params
 
     def __eq__(self, other):
-        return (isinstance(other, self.__class__) and
-                self.partial_key == other.partial_key and
-                self.curve_params == other.curve_params)
+        return (
+            isinstance(other, self.__class__)
+            and self.partial_key == other.partial_key
+            and self.curve_params == other.curve_params
+        )
 
     def __str__(self):
-        return 'PartialReEncryptionKey λ2_i * y2_i - λ1_i * y1_i = {} (for curve {})'.format(self.partial_key, self.curve_params._name)
+        return "PartialReEncryptionKey λ2_i * y2_i - λ1_i * y1_i = {} (for curve {})".format(
+            self.partial_key, self.curve_params._name
+        )
 
 
 class ReEncryptionKey(ThresholdDataClass):
@@ -350,21 +393,26 @@ class ReEncryptionKey(ThresholdDataClass):
         :param curve_params: The used curve parameters
         """
         if key < 0 or key > curve_params.order:
-            raise ThresholdCryptoError('Invalid re-encryption key')
+            raise ThresholdCryptoError("Invalid re-encryption key")
 
         self.key = key
         self.curve_params = curve_params
 
     def __eq__(self, other):
-        return (isinstance(other, self.__class__) and
-                self.key == other.key and
-                self.curve_params == other.curve_params)
+        return (
+            isinstance(other, self.__class__)
+            and self.key == other.key
+            and self.curve_params == other.curve_params
+        )
 
     def __str__(self):
-        return 'ReEncryptionKey dB - dA = {} (for curve {})'.format(self.key, self.curve_params._name)
+        return "ReEncryptionKey dB - dA = {} (for curve {})".format(
+            self.key, self.curve_params._name
+        )
 
 
 # DKG data types
+
 
 class DkgClosedCommitment(ThresholdDataClass):
     """
@@ -382,12 +430,16 @@ class DkgClosedCommitment(ThresholdDataClass):
         self.commitment = commitment
 
     def __eq__(self, other):
-        return (isinstance(other, self.__class__) and
-                self.participant_id == other.participant_id and
-                self.commitment == other.commitment)
+        return (
+            isinstance(other, self.__class__)
+            and self.participant_id == other.participant_id
+            and self.commitment == other.commitment
+        )
 
     def __str__(self):
-        return 'DkgClosedCommitment for participant {} = {}'.format(self.participant_id, self.commitment)
+        return "DkgClosedCommitment for participant {} = {}".format(
+            self.participant_id, self.commitment
+        )
 
 
 class DkgOpenCommitment(ThresholdDataClass):
@@ -395,7 +447,9 @@ class DkgOpenCommitment(ThresholdDataClass):
     The open commitment of Pedersens DKG protocol sent after each participant has received all closed commitments.
     """
 
-    def __init__(self, participant_id: int, commitment: bytes, h_i: ECC.EccPoint, r: bytes):
+    def __init__(
+        self, participant_id: int, commitment: bytes, h_i: ECC.EccPoint, r: bytes
+    ):
         """
         Initialize the open commitment.
 
@@ -410,14 +464,18 @@ class DkgOpenCommitment(ThresholdDataClass):
         self.r = r
 
     def __eq__(self, other):
-        return (isinstance(other, self.__class__) and
-                self.participant_id == other.participant_id and
-                self.commitment == other.commitment and
-                self.h_i == other.h_i and
-                self.r == other.r)
+        return (
+            isinstance(other, self.__class__)
+            and self.participant_id == other.participant_id
+            and self.commitment == other.commitment
+            and self.h_i == other.h_i
+            and self.r == other.r
+        )
 
     def __str__(self):
-        return 'DkgOpenCommitment for participant {} = (c={}, h_i={}, r={})'.format(self.participant_id, self.commitment, self.h_i, self.r)
+        return "DkgOpenCommitment for participant {} = (c={}, h_i={}, r={})".format(
+            self.participant_id, self.commitment, self.h_i, self.r
+        )
 
 
 class DkgFijValue(ThresholdDataClass):
@@ -436,12 +494,16 @@ class DkgFijValue(ThresholdDataClass):
         self.F_ij = F_ij
 
     def __eq__(self, other):
-        return (isinstance(other, self.__class__) and
-                self.source_participant_id == other.source_participant_id and
-                self.F_ij == other.F_ij)
+        return (
+            isinstance(other, self.__class__)
+            and self.source_participant_id == other.source_participant_id
+            and self.F_ij == other.F_ij
+        )
 
     def __str__(self):
-        return 'DkgFijValue from participant {} = {}'.format(self.source_participant_id, self.F_ij)
+        return "DkgFijValue from participant {} = {}".format(
+            self.source_participant_id, self.F_ij
+        )
 
 
 class DkgSijValue(ThresholdDataClass):
@@ -449,7 +511,9 @@ class DkgSijValue(ThresholdDataClass):
     The share of their secret value a participant sents to another participant SECRETLY.
     """
 
-    def __init__(self, source_participant_id: int, target_participant_id: int, s_ij: int):
+    def __init__(
+        self, source_participant_id: int, target_participant_id: int, s_ij: int
+    ):
         """
         Initialize the s_ij value.
 
@@ -462,10 +526,14 @@ class DkgSijValue(ThresholdDataClass):
         self.s_ij = s_ij
 
     def __eq__(self, other):
-        return (isinstance(other, self.__class__) and
-                self.source_participant_id == other.source_participant_id and
-                self.target_participant_id == other.target_participant_id and
-                self.s_ij == other.s_ij)
+        return (
+            isinstance(other, self.__class__)
+            and self.source_participant_id == other.source_participant_id
+            and self.target_participant_id == other.target_participant_id
+            and self.s_ij == other.s_ij
+        )
 
     def __str__(self):
-        return 'DkgSijValue from participant {} to participant {} = {}'.format(self.source_participant_id, self.target_participant_id, self.s_ij)
+        return "DkgSijValue from participant {} to participant {} = {}".format(
+            self.source_participant_id, self.target_participant_id, self.s_ij
+        )

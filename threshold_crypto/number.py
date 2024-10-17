@@ -7,12 +7,12 @@ from Crypto.Random import random
 
 
 def int_to_bytes(value: int) -> bytes:
-    """ Return the bytes for a given integer. """
-    return value.to_bytes((value.bit_length() + 7) // 8, byteorder='big')
+    """Return the bytes for a given integer."""
+    return value.to_bytes((value.bit_length() + 7) // 8, byteorder="big")
 
 
 def ecc_sum(points: List[ECC.EccPoint]) -> Optional[ECC.EccPoint]:
-    """ Compute the sum of a list of EccPoints. """
+    """Compute the sum of a list of EccPoints."""
     if len(points) == 0:
         return None
     elif len(points) == 1:
@@ -26,24 +26,24 @@ def ecc_sum(points: List[ECC.EccPoint]) -> Optional[ECC.EccPoint]:
 
 
 def random_in_range(a: int, b: int) -> int:
-    """ Return a random number r with a <= r <= b. """
+    """Return a random number r with a <= r <= b."""
     return random.randint(a, b)
 
 
 def prime_mod_inv(x: int, p: int) -> int:
-    """ Compute the modular inverse of x in the finite field Z_p. """
+    """Compute the modular inverse of x in the finite field Z_p."""
     return pow(x, p - 2, p)  # Fermats little theorem
 
 
 def prod(factors: List[int]) -> int:
-    """ Compute the product of a list of integers. """
+    """Compute the product of a list of integers."""
     return functools.reduce(operator.mul, factors, 1)
 
 
 class PolynomMod:
 
     @staticmethod
-    def create_random_polynom(absolute_term: int, degree: int, q: int) -> 'PolynomMod':
+    def create_random_polynom(absolute_term: int, degree: int, q: int) -> "PolynomMod":
         """
         Create a polynomial with random coefficients in range [1, q - 1] and an given absolute term.
 
@@ -76,7 +76,9 @@ class PolynomMod:
         :param x: the value
         :return: the result
         """
-        evaluated = ((self.coefficients[j] * pow(x, j)) for j in range(0, self.degree + 1))
+        evaluated = (
+            (self.coefficients[j] * pow(x, j)) for j in range(0, self.degree + 1)
+        )
         return sum(evaluated) % self.q
 
     def __str__(self) -> str:

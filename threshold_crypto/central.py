@@ -7,24 +7,27 @@ import nacl.exceptions
 import nacl.hash
 from Crypto.PublicKey import ECC
 
-from threshold_crypto.data import (CurveParameters,
-                                   ThresholdParameters,
-                                   KeyShare,
-                                   PartialDecryption,
-                                   EncryptedMessage,
-                                   ThresholdCryptoError,
-                                   PartialReEncryptionKey,
-                                   ReEncryptionKey,
-                                   PublicKey,
-                                   LagrangeCoefficient)
+from threshold_crypto.data import (
+    CurveParameters,
+    ThresholdParameters,
+    KeyShare,
+    PartialDecryption,
+    EncryptedMessage,
+    ThresholdCryptoError,
+    PartialReEncryptionKey,
+    ReEncryptionKey,
+    PublicKey,
+    LagrangeCoefficient,
+)
 from threshold_crypto import number
 
 
 # key generation
 
 
-def create_public_key_and_shares_centralized(curve_params: CurveParameters,
-                                             threshold_params: ThresholdParameters) -> (PublicKey, List[KeyShare]):
+def create_public_key_and_shares_centralized(
+    curve_params: CurveParameters, threshold_params: ThresholdParameters
+) -> (PublicKey, List[KeyShare]):
     """
     Creates a public key and n shares by choosing a random secret key and using it for computations.
 
@@ -37,14 +40,20 @@ def create_public_key_and_shares_centralized(curve_params: CurveParameters,
     pk = PublicKey(Q, curve_params)
 
     # Perform Shamir's secret sharing in Z_q
-    polynom = number.PolynomMod.create_random_polynom(d, threshold_params.t - 1, curve_params.order)
+    polynom = number.PolynomMod.create_random_polynom(
+        d, threshold_params.t - 1, curve_params.order
+    )
     supporting_points = range(1, threshold_params.n + 1)
     shares = [KeyShare(x, polynom.evaluate(x), curve_params) for x in supporting_points]
 
     return pk, shares
 
 
-def _restore_priv_key(curve_params: CurveParameters, shares: List[KeyShare], treshold_params: ThresholdParameters) -> int:
+def _restore_priv_key(
+    curve_params: CurveParameters,
+    shares: List[KeyShare],
+    treshold_params: ThresholdParameters,
+) -> int:
     """
     Combine multiple key shares to compute the (implicit) private key.
 
@@ -55,13 +64,24 @@ def _restore_priv_key(curve_params: CurveParameters, shares: List[KeyShare], tre
     :param treshold_params:
     :return:
     """
-    used_shares = shares[:treshold_params.t]
+    used_shares = shares[: treshold_params.t]
     x_shares = [share.x for share in used_shares]
     y_shares = [share.y for share in used_shares]
 
-    lagrange_coefficients = [lagrange_coefficient_for_key_share_indices(x_shares, idx, curve_params) for idx in x_shares]
+    lagrange_coefficients = [
+        lagrange_coefficient_for_key_share_indices(x_shares, idx, curve_params)
+        for idx in x_shares
+    ]
 
-    restored_secret = sum([(lagrange_coefficients[i].coefficient * y_shares[i]) for i in range(0, len(used_shares))]) % curve_params.order
+    restored_secret = (
+        sum(
+            [
+                (lagrange_coefficients[i].coefficient * y_shares[i])
+                for i in range(0, len(used_shares))
+            ]
+        )
+        % curve_params.order
+    )
 
     return restored_secret
 
@@ -80,7 +100,7 @@ def encrypt_message(message: str, public_key: PublicKey) -> EncryptedMessage:
     :return: the encrypted message
     """
     curve_params = public_key.curve_params
-    encoded_message = bytes(message, 'utf-8')
+    encoded_message = bytes(message, "utf-8")
 
     # Create random subgroup element and use its hash as symmetric key to prevent
     # attacks described in "Why Textbook ElGamal and RSA Encryption Are Insecure"
@@ -90,15 +110,17 @@ def encrypt_message(message: str, public_key: PublicKey) -> EncryptedMessage:
     point_bytes = _key_bytes_from_point(key_point)
 
     try:
-        symmetric_key = nacl.hash.blake2b(point_bytes,
-                                          digest_size=nacl.secret.SecretBox.KEY_SIZE,
-                                          encoder=nacl.encoding.RawEncoder)
+        symmetric_key = nacl.hash.blake2b(
+            point_bytes,
+            digest_size=nacl.secret.SecretBox.KEY_SIZE,
+            encoder=nacl.encoding.RawEncoder,
+        )
         # Use derived symmetric key to encrypt the message
         box = nacl.secret.SecretBox(symmetric_key)
         encrypted = box.encrypt(encoded_message)
     except nacl.exceptions.CryptoError as e:
-        print('Encryption failed: ' + str(e))
-        raise ThresholdCryptoError('Message encryption failed.')
+        print("Encryption failed: " + str(e))
+        raise ThresholdCryptoError("Message encryption failed.")
 
     # Use threshold scheme to encrypt the curve point used as hash input to derive the symmetric key
     C1, C2 = _encrypt_key_point(key_point, public_key.Q, curve_params)
@@ -108,13 +130,13 @@ def encrypt_message(message: str, public_key: PublicKey) -> EncryptedMessage:
 
 def _key_bytes_from_point(p: ECC.EccPoint) -> bytes:
     key_point_byte_length = (int(p.x).bit_length() + 7) // 8
-    point_bytes = int(p.x).to_bytes(key_point_byte_length, byteorder='big')
+    point_bytes = int(p.x).to_bytes(key_point_byte_length, byteorder="big")
     return point_bytes
 
 
-def _encrypt_key_point(key_point: ECC.EccPoint,
-                       Q: ECC.EccPoint,
-                       curve_params: CurveParameters) -> (ECC.EccPoint, ECC.EccPoint):
+def _encrypt_key_point(
+    key_point: ECC.EccPoint, Q: ECC.EccPoint, curve_params: CurveParameters
+) -> (ECC.EccPoint, ECC.EccPoint):
     k = number.random_in_range(1, curve_params.order)
     C1 = k * curve_params.P
     kQ = k * Q
@@ -126,10 +148,11 @@ def _encrypt_key_point(key_point: ECC.EccPoint,
 # decryption
 
 
-def decrypt_message(partial_decryptions: List[PartialDecryption],
-                    encrypted_message: EncryptedMessage,
-                    threshold_params: ThresholdParameters
-                    ) -> str:
+def decrypt_message(
+    partial_decryptions: List[PartialDecryption],
+    encrypted_message: EncryptedMessage,
+    threshold_params: ThresholdParameters,
+) -> str:
     """
     Decrypt a message using the combination of at least t partial decryptions. Similar to the encryption process
     the hybrid approach is used for decryption.
@@ -140,19 +163,22 @@ def decrypt_message(partial_decryptions: List[PartialDecryption],
     :return: the decrypted message
     """
     if len(partial_decryptions) < threshold_params.t:
-        raise ThresholdCryptoError('less than t partial decryptions given')
+        raise ThresholdCryptoError("less than t partial decryptions given")
 
     return _decrypt_message(partial_decryptions, encrypted_message)
 
 
-def _decrypt_message(partial_decryptions: List[PartialDecryption],
-                     encrypted_message: EncryptedMessage,
-                     ) -> str:
+def _decrypt_message(
+    partial_decryptions: List[PartialDecryption],
+    encrypted_message: EncryptedMessage,
+) -> str:
     # this method does not contain the check for given number of partial decryptions to allow testing the failing decryption
     curve_params = partial_decryptions[0].curve_params
     for partial_key in partial_decryptions:
         if partial_key.curve_params != curve_params:
-            raise ThresholdCryptoError("Varying curve parameters found in partial re-encryption keys")
+            raise ThresholdCryptoError(
+                "Varying curve parameters found in partial re-encryption keys"
+            )
 
     key_point = _combine_shares(
         partial_decryptions,
@@ -162,26 +188,35 @@ def _decrypt_message(partial_decryptions: List[PartialDecryption],
     point_bytes = _key_bytes_from_point(key_point)
 
     try:
-        key = nacl.hash.blake2b(point_bytes,
-                                digest_size=nacl.secret.SecretBox.KEY_SIZE,
-                                encoder=nacl.encoding.RawEncoder)
+        key = nacl.hash.blake2b(
+            point_bytes,
+            digest_size=nacl.secret.SecretBox.KEY_SIZE,
+            encoder=nacl.encoding.RawEncoder,
+        )
         box = nacl.secret.SecretBox(key)
         encoded_plaintext = box.decrypt(encrypted_message.ciphertext)
     except nacl.exceptions.CryptoError as e:
-        raise ThresholdCryptoError('Message decryption failed. Internal: ' + str(e))
+        raise ThresholdCryptoError("Message decryption failed. Internal: " + str(e))
 
-    return str(encoded_plaintext, 'utf-8')
+    return str(encoded_plaintext, "utf-8")
 
 
-def _combine_shares(partial_decryptions: List[PartialDecryption],
-                    encrypted_message: EncryptedMessage,
-                    curve_params: CurveParameters,
-                    ) -> ECC.EccPoint:
+def _combine_shares(
+    partial_decryptions: List[PartialDecryption],
+    encrypted_message: EncryptedMessage,
+    curve_params: CurveParameters,
+) -> ECC.EccPoint:
     # compute lagrange coefficients
     partial_indices = [dec.x for dec in partial_decryptions]
-    lagrange_coefficients = [lagrange_coefficient_for_key_share_indices(partial_indices, idx, curve_params) for idx in partial_indices]
+    lagrange_coefficients = [
+        lagrange_coefficient_for_key_share_indices(partial_indices, idx, curve_params)
+        for idx in partial_indices
+    ]
 
-    summands = [lagrange_coefficients[i].coefficient * partial_decryptions[i].yC1 for i in range(0, len(partial_decryptions))]
+    summands = [
+        lagrange_coefficients[i].coefficient * partial_decryptions[i].yC1
+        for i in range(0, len(partial_decryptions))
+    ]
     restored_kdP = number.ecc_sum(summands)
 
     restored_point = encrypted_message.C2 + (-restored_kdP)
@@ -192,9 +227,9 @@ def _combine_shares(partial_decryptions: List[PartialDecryption],
 # re-encryption
 
 
-def lagrange_coefficient_for_key_share_indices(key_share_indices: List[int],
-                                               p_idx: int,
-                                               curve_params: CurveParameters) -> LagrangeCoefficient:
+def lagrange_coefficient_for_key_share_indices(
+    key_share_indices: List[int], p_idx: int, curve_params: CurveParameters
+) -> LagrangeCoefficient:
     """
     Create the ith Lagrange coefficient for a list of key shares.
 
@@ -204,7 +239,11 @@ def lagrange_coefficient_for_key_share_indices(key_share_indices: List[int],
     :return:
     """
     if p_idx not in key_share_indices:
-        raise ThresholdCryptoError("Participant index {} not found in used indices {} for computation of Lagrange coefficient".format(p_idx, key_share_indices))
+        raise ThresholdCryptoError(
+            "Participant index {} not found in used indices {} for computation of Lagrange coefficient".format(
+                p_idx, key_share_indices
+            )
+        )
 
     idx_len = len(key_share_indices)
     i = key_share_indices.index(p_idx)
@@ -212,17 +251,23 @@ def lagrange_coefficient_for_key_share_indices(key_share_indices: List[int],
     def x(idx):
         return key_share_indices[idx]
 
-    tmp = [(- x(j) * number.prime_mod_inv(x(i) - x(j), curve_params.order)) for j in range(0, idx_len) if not j == i]
+    tmp = [
+        (-x(j) * number.prime_mod_inv(x(i) - x(j), curve_params.order))
+        for j in range(0, idx_len)
+        if not j == i
+    ]
     coefficient = number.prod(tmp) % curve_params.order  # lambda_i
 
     return LagrangeCoefficient(p_idx, key_share_indices, coefficient)
 
 
-def combine_partial_re_encryption_keys(partial_keys: List[PartialReEncryptionKey],
-                                       old_public_key: PublicKey,
-                                       new_public_key: PublicKey,
-                                       old_threshold_params: ThresholdParameters,
-                                       new_threshold_params: ThresholdParameters) -> ReEncryptionKey:
+def combine_partial_re_encryption_keys(
+    partial_keys: List[PartialReEncryptionKey],
+    old_public_key: PublicKey,
+    new_public_key: PublicKey,
+    old_threshold_params: ThresholdParameters,
+    new_threshold_params: ThresholdParameters,
+) -> ReEncryptionKey:
     """
     Combine a number of partial re-encryption keys yielding the re-encryption key.
 
@@ -243,7 +288,9 @@ def combine_partial_re_encryption_keys(partial_keys: List[PartialReEncryptionKey
     curve_params = partial_keys[0].curve_params
     for partial_key in partial_keys:
         if partial_key.curve_params != curve_params:
-            raise ThresholdCryptoError("Varying curve parameters found in partial re-encryption keys")
+            raise ThresholdCryptoError(
+                "Varying curve parameters found in partial re-encryption keys"
+            )
 
     re_key = sum([k.partial_key for k in partial_keys]) % curve_params.order
 
@@ -253,12 +300,16 @@ def combine_partial_re_encryption_keys(partial_keys: List[PartialReEncryptionKey
     checkval2 = new_public_key.Q + (-old_public_key.Q)
 
     if checkval1 != checkval2:
-        raise ThresholdCryptoError("The combined proxy key is invalid for given public keys.")
+        raise ThresholdCryptoError(
+            "The combined proxy key is invalid for given public keys."
+        )
 
     return ReEncryptionKey(re_key, curve_params)
 
 
-def re_encrypt_message(em: EncryptedMessage, re_key: ReEncryptionKey) -> EncryptedMessage:
+def re_encrypt_message(
+    em: EncryptedMessage, re_key: ReEncryptionKey
+) -> EncryptedMessage:
     """
     Re-encrypts a message using the provided re-encryption key.
 

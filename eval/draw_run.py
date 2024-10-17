@@ -9,12 +9,9 @@ import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
-FigureParameter = namedtuple('FigureParameter', ['tasks',
-                                                 'title',
-                                                 'filename',
-                                                 'use_combined'
-                                                 ]
-                             )
+FigureParameter = namedtuple(
+    "FigureParameter", ["tasks", "title", "filename", "use_combined"]
+)
 
 
 def autolabel(rects, ax):
@@ -23,14 +20,16 @@ def autolabel(rects, ax):
 
     for rect in rects:
         height = rect.get_height()
-        ax.annotate('{:0.3f}'.format(height),
-                    xy=(rect.get_x() + rect.get_width() / 2, height),
-                    xytext=(0, 3),  # 3 points vertical offset
-                    textcoords="offset points",
-                    rotation=90,
-                    ha='center',
-                    va='bottom',
-                    color=bar_color)
+        ax.annotate(
+            "{:0.3f}".format(height),
+            xy=(rect.get_x() + rect.get_width() / 2, height),
+            xytext=(0, 3),  # 3 points vertical offset
+            textcoords="offset points",
+            rotation=90,
+            ha="center",
+            va="bottom",
+            color=bar_color,
+        )
 
 
 def plot_bar(df, fig_params: FigureParameter):
@@ -44,12 +43,12 @@ def plot_bar(df, fig_params: FigureParameter):
 
     # plot = sns.barplot(data=t_data, x='combined', y='time', ax=ax, color='#1979a9')
     x_data = t_data.combined if fig_params.use_combined else t_data.parameters
-    plot = ax.bar(x=x_data, height=t_data.time, color='#1979a9')
+    plot = ax.bar(x=x_data, height=t_data.time, color="#1979a9")
 
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-    ax.spines['left'].set_visible(False)
-    ax.spines['bottom'].set_color('#DDDDDD')
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["left"].set_visible(False)
+    ax.spines["bottom"].set_color("#DDDDDD")
 
     bar_color = plot[0].get_facecolor()
 
@@ -61,16 +60,16 @@ def plot_bar(df, fig_params: FigureParameter):
             bar.get_x() + bar.get_width() / 2,
             bar.get_height() + 0.3,
             round(bar.get_height(), 1),
-            horizontalalignment='center',
+            horizontalalignment="center",
             color=bar_color,
-            weight='bold'
+            weight="bold",
         )
 
-    ax.tick_params(axis='x', rotation=90)
+    ax.tick_params(axis="x", rotation=90)
 
-    ax.set_xlabel('Operation', labelpad=15, color='#333333')
-    ax.set_ylabel('Time', labelpad=15, color='#333333')
-    ax.set_title(fig_params.title, pad=15, color='#333333', weight='bold')
+    ax.set_xlabel("Operation", labelpad=15, color="#333333")
+    ax.set_ylabel("Time", labelpad=15, color="#333333")
+    ax.set_title(fig_params.title, pad=15, color="#333333", weight="bold")
 
     f.tight_layout()
     print("Saving {}".format(fig_params.filename))
@@ -78,13 +77,17 @@ def plot_bar(df, fig_params: FigureParameter):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='draw a performance run')
-    parser.add_argument('path', type=str, help='the file path for the performance evaluation output file')
+    parser = argparse.ArgumentParser(description="draw a performance run")
+    parser.add_argument(
+        "path",
+        type=str,
+        help="the file path for the performance evaluation output file",
+    )
     args = parser.parse_args()
     filepath = args.path
 
-    df = pandas.read_csv(filepath, dtype={'parameters': str}, engine='c')
-    df.parameters = df.parameters.fillna('')
+    df = pandas.read_csv(filepath, dtype={"parameters": str}, engine="c")
+    df.parameters = df.parameters.fillna("")
     df["combined"] = df["task"].astype(str) + df["parameters"]
 
     print(df)
@@ -109,9 +112,13 @@ def main():
     ]
 
     figures = [
-        FigureParameter(dkg_task, "Distributed key generation", imgpath("dkg.png"), False),
+        FigureParameter(
+            dkg_task, "Distributed key generation", imgpath("dkg.png"), False
+        ),
         FigureParameter(decrypt_task, "Decryption", imgpath("dec.png"), False),
-        FigureParameter(diverse_tasks, "Remaining operations", imgpath("divers.png"), True),
+        FigureParameter(
+            diverse_tasks, "Remaining operations", imgpath("divers.png"), True
+        ),
     ]
 
     # for fig_params in figures:
@@ -181,30 +188,46 @@ def draw_enc_dec(df):
 
 
 def draw_enc_dec_on_ax(df, ax: Axes):
-    enc_data = df.loc[df.task == 'Encrypt']
-    dec23_data = df.loc[df.task == 'Decrypt23']
-    dec35_data = df.loc[df.task == 'Decrypt35']
-    dec210_data = df.loc[df.task == 'Decrypt210']
+    enc_data = df.loc[df.task == "Encrypt"]
+    dec23_data = df.loc[df.task == "Decrypt23"]
+    dec35_data = df.loc[df.task == "Decrypt35"]
+    dec210_data = df.loc[df.task == "Decrypt210"]
 
-    plot1 = ax.plot(enc_data.parameters.astype(int), enc_data.time / enc_data.rounds, label="Encrypt")  # , color='#FF0000')
-    plot2 = ax.plot(enc_data.parameters.astype(int), dec23_data.time / dec23_data.rounds, label="Combine for (2,3)-scheme")  # , color='#00FF00')
-    plot3 = ax.plot(enc_data.parameters.astype(int), dec210_data.time / dec210_data.rounds, label="Combine for (2,10)-scheme")  # , color='#00FF00')
-    plot4 = ax.plot(enc_data.parameters.astype(int), dec35_data.time / dec35_data.rounds, label="Combine for (3,5)-scheme")  # , color='#00FF00')
+    plot1 = ax.plot(
+        enc_data.parameters.astype(int),
+        enc_data.time / enc_data.rounds,
+        label="Encrypt",
+    )  # , color='#FF0000')
+    plot2 = ax.plot(
+        enc_data.parameters.astype(int),
+        dec23_data.time / dec23_data.rounds,
+        label="Combine for (2,3)-scheme",
+    )  # , color='#00FF00')
+    plot3 = ax.plot(
+        enc_data.parameters.astype(int),
+        dec210_data.time / dec210_data.rounds,
+        label="Combine for (2,10)-scheme",
+    )  # , color='#00FF00')
+    plot4 = ax.plot(
+        enc_data.parameters.astype(int),
+        dec35_data.time / dec35_data.rounds,
+        label="Combine for (3,5)-scheme",
+    )  # , color='#00FF00')
 
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-    ax.spines['left'].set_color('#DDDDDD')
-    ax.spines['bottom'].set_color('#DDDDDD')
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["left"].set_color("#DDDDDD")
+    ax.spines["bottom"].set_color("#DDDDDD")
 
-    ax.grid(axis='y', color="#DDDDDD")
+    ax.grid(axis="y", color="#DDDDDD")
 
-    ax.tick_params(axis='both',  color="#DDDDDD") # rotation=45,
-    ax.ticklabel_format(style='plain')
+    ax.tick_params(axis="both", color="#DDDDDD")  # rotation=45,
+    ax.ticklabel_format(style="plain")
     ax.set_ybound(lower=0, upper=ax.get_ybound()[1])
     ax.set_xbound(lower=0, upper=ax.get_xbound()[1])
 
-    ax.set_xlabel('plaintext length [byte]', labelpad=15, color='#333333')
-    ax.set_ylabel('time [s]', labelpad=15, color='#333333')
+    ax.set_xlabel("plaintext length [byte]", labelpad=15, color="#333333")
+    ax.set_ylabel("time [s]", labelpad=15, color="#333333")
 
     ax.legend()
 
@@ -228,24 +251,24 @@ def draw_dkg_on_ax(df, ax, dkg_dec, label):
     autolabel(bar_dkg, ax)
 
     # set graph "borders"
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-    ax.spines['left'].set_color('#DDDDDD')
-    ax.spines['bottom'].set_color('#DDDDDD')
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["left"].set_color("#DDDDDD")
+    ax.spines["bottom"].set_color("#DDDDDD")
 
     # include grid lines behind bars
     ax.set_axisbelow(True)
-    ax.grid(axis='y', color="#DDDDDD")
+    ax.grid(axis="y", color="#DDDDDD")
 
     # ticks and labels
-    ax.tick_params(axis='x', rotation=90)
-    ax.tick_params(axis='both', color="#DDDDDD")
+    ax.tick_params(axis="x", rotation=90)
+    ax.tick_params(axis="both", color="#DDDDDD")
     ax.set_xticks(x)
     ax.set_xticklabels(dkg_data.parameters)
 
     # axis labels and title
-    ax.set_xlabel('used (t,n)-scheme', labelpad=15, color='#333333')
-    ax.set_ylabel('time [s]', labelpad=15, color='#333333')
+    ax.set_xlabel("used (t,n)-scheme", labelpad=15, color="#333333")
+    ax.set_ylabel("time [s]", labelpad=15, color="#333333")
 
     # insert legend
     ax.legend()
@@ -260,9 +283,9 @@ def draw_dkg_ckg_dec(df) -> Figure:
 
 def draw_dkg_ckg_dec_on_ax(df, ax):
     tasks = ["DKG", "CKG", "DecryptCombine"]
-    dkg_data = df.loc[df.task == 'DKG']
-    ckg_data = df.loc[df.task == 'CKG']
-    dec_data = df.loc[df.task == 'DecryptCombine']
+    dkg_data = df.loc[df.task == "DKG"]
+    ckg_data = df.loc[df.task == "CKG"]
+    dec_data = df.loc[df.task == "DecryptCombine"]
 
     x = np.arange(len(dkg_data))
     width = 0.2
@@ -277,24 +300,24 @@ def draw_dkg_ckg_dec_on_ax(df, ax):
     autolabel(bar_dec, ax)
 
     # set graph "borders"
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-    ax.spines['left'].set_color('#DDDDDD')
-    ax.spines['bottom'].set_color('#DDDDDD')
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["left"].set_color("#DDDDDD")
+    ax.spines["bottom"].set_color("#DDDDDD")
 
     # include grid lines behind bars
     ax.set_axisbelow(True)
-    ax.grid(axis='y', color="#DDDDDD")
+    ax.grid(axis="y", color="#DDDDDD")
 
     # ticks and labels
-    ax.tick_params(axis='x', rotation=90)
-    ax.tick_params(axis='both', color="#DDDDDD")
+    ax.tick_params(axis="x", rotation=90)
+    ax.tick_params(axis="both", color="#DDDDDD")
     ax.set_xticks(x)
     ax.set_xticklabels(dkg_data.parameters)
 
     # axis labels and title
-    ax.set_xlabel('used (t,n)-scheme', labelpad=15, color='#333333')
-    ax.set_ylabel('time [s]', labelpad=15, color='#333333')
+    ax.set_xlabel("used (t,n)-scheme", labelpad=15, color="#333333")
+    ax.set_ylabel("time [s]", labelpad=15, color="#333333")
     # ax.set_title("TITLE", pad=15, color='#333333', weight='bold')
 
     # insert legend
@@ -305,8 +328,8 @@ def draw_re_pdec_on_ax(df, ax: Axes):
     diverse_tasks = [
         "ReEncrypt",
         "PartialDecryption",
-        #"PartialReEncryptionKey",
-        #"ReEncryptionKeyCombination",
+        # "PartialReEncryptionKey",
+        # "ReEncryptionKeyCombination",
     ]
     t_data = df.loc[df.task.isin(diverse_tasks)]
     x_data = t_data.task
@@ -314,20 +337,20 @@ def draw_re_pdec_on_ax(df, ax: Axes):
 
     plot = ax.bar(x=x_data, height=t_data.time, width=0.2)  # , color='#214355')
 
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-    ax.spines['left'].set_visible(False)
-    ax.spines['bottom'].set_color('#DDDDDD')
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["left"].set_visible(False)
+    ax.spines["bottom"].set_color("#DDDDDD")
 
     autolabel(plot, ax)
 
     # include grid lines behind bars
     ax.set_axisbelow(True)
-    ax.grid(axis='y', color="#DDDDDD")
+    ax.grid(axis="y", color="#DDDDDD")
 
     # ticks and labels
-    ax.tick_params(axis='x', rotation=90)
-    ax.tick_params(axis='both', color="#DDDDDD")
+    ax.tick_params(axis="x", rotation=90)
+    ax.tick_params(axis="both", color="#DDDDDD")
     ax.yaxis.set_tick_params(labelleft=False)
 
 
@@ -344,5 +367,5 @@ def draw_enc_dec_re_pdec(df):
     return f
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
