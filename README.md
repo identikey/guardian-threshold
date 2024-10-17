@@ -1,3 +1,28 @@
+# Threshold Encryption
+
+# This repo aspires to be a full functional El Gamal threshold cryptography library
+
+## High-level
+
+1. Spin up multiple nodes
+2. Do Distributed Key Generation between them
+3. Use composite public key to generate an encrypted secret
+4. Request a threshold of nodes to decrypt the secret
+
+The CLI has the orchestrator which orchestrates between the running encryption nodes.
+
+Persistance for each running process is handled via SQLite.
+
+## How to use
+
+### Run migrations
+
+`poetry run alembic` # TODO
+
+## Credits
+
+Special thanks to @tompeterson, who originally authored the excellent library for the El Gamal-based threshold cryptography.
+
 # Threshold cryptography library
 
 A stateless library which offers functionality for ElGamal-based threshold decryption with centralized or distributed key generation.
@@ -10,8 +35,6 @@ A hybrid approach (using [pynacl](https://pynacl.readthedocs.io) for symmetric e
 Therefore there are no limitations regarding message lengths or format. Additionally the integrity of a message is
 secured by using the AE-scheme, meaning changes to some parts of the ciphertext, to partial decryptions or even
 dishonest share owners can be detected.
-
-**Warning**: This library has never been (independently) audited and must not be used for productive applications.
 
 ## Usage
 

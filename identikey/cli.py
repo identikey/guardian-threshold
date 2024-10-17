@@ -77,7 +77,7 @@ def main():
     migrate_parser.add_argument(
         "alembic_args",
         nargs=argparse.REMAINDER,
-        help="Additional arguments to pass to Alembic",
+        help="Additional arguments to pass to Alembic, e.g. upgrade head",
     )
 
     args = parser.parse_args()

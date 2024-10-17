@@ -9,7 +9,6 @@ import models
 from pydantic import BaseModel, Field
 import threshold_crypto as tc
 from threshold_crypto.data import CurveParameters, ThresholdParameters
-import base64
 import json
 
 app = FastAPI()
@@ -31,17 +30,6 @@ def get_db():
         db.close()
 
 
-@app.get("/status")
-def read_status() -> dict[str, str]:
-    return {"status": "OK"}
-
-
-@app.on_event("startup")
-async def startup_event():
-    db = next(get_db())
-    check_or_create_self_participant(db)
-
-
 def check_or_create_self_participant(db: Session):
     self_participant = db.query(models.Participant).filter_by(is_self=True).first()
 
@@ -56,12 +44,20 @@ def check_or_create_self_participant(db: Session):
         db.commit()
 
 
-def start(port: int = 8000, db_file: str = "keyholder.db") -> None:
-    global engine, SessionLocal
-    engine, SessionLocal = init_db(db_file)
-    models.Base.metadata.create_all(bind=engine)
+### API endpoints ###
 
-    uvicorn.run(app, host="0.0.0.0", port=port)
+
+@app.get("/status")
+def read_status() -> dict[str, str]:
+    return {"status": "OK"}
+
+
+@app.get("/get_id")
+def get_id(db: Session = Depends(get_db)):
+    self_participant = db.query(models.Participant).filter_by(is_self=True).first()
+    if not self_participant:
+        raise HTTPException(status_code=404, detail="Self participant not found")
+    return {"id": self_participant.participant_id}
 
 
 class ParticipantList(BaseModel):
@@ -90,14 +86,6 @@ def start_dkg(db: Session = Depends(get_db)):
     # Here you would implement the actual DKG logic
     # This is a placeholder for now
     return {"status": "DKG process started"}
-
-
-@app.get("/get_id")
-def get_id(db: Session = Depends(get_db)):
-    self_participant = db.query(models.Participant).filter_by(is_self=True).first()
-    if not self_participant:
-        raise HTTPException(status_code=404, detail="Self participant not found")
-    return {"id": self_participant.participant_id}
 
 
 @app.get("/participants")
@@ -201,6 +189,23 @@ def receive_closed_commitments(
 
     db.commit()
     return {"status": "Closed commitments received and stored"}
+
+
+### Entrypoint & Event Handlers ###
+
+
+@app.on_event("startup")
+async def startup_event():
+    db = next(get_db())
+    check_or_create_self_participant(db)
+
+
+def start(port: int = 8000, db_file: str = "keyholder.db") -> None:
+    global engine, SessionLocal
+    engine, SessionLocal = init_db(db_file)
+    models.Base.metadata.create_all(bind=engine)
+
+    uvicorn.run(app, host="0.0.0.0", port=port)
 
 
 if __name__ == "__main__":
