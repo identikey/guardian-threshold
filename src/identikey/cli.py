@@ -1,6 +1,6 @@
 import argparse
 import os  # Import os to set environment variables
-from main import start
+from identikey.server import start
 import threshold_crypto as tc
 import subprocess
 from identikey.dkg_orchestrator import perform_dkg  # Add this import
@@ -62,7 +62,7 @@ def main():
     run_server_parser.add_argument(
         "--db",  # New argument for database file
         type=str,
-        default="test.db",
+        default="data/keyholder.db",
         help="Database file to use",
     )
 
@@ -71,7 +71,7 @@ def main():
     migrate_parser.add_argument(
         "--db",
         type=str,
-        default="test.db",
+        default="data/keyholder.db",
         help="Database file to migrate",
     )
     migrate_parser.add_argument(

@@ -4,8 +4,8 @@ import uvicorn
 from typing import Any, Generator, List, Dict
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
-from database import init_db
-import models
+from identikey.database import init_db
+import identikey.models as models
 from pydantic import BaseModel, Field
 import threshold_crypto as tc
 from threshold_crypto.data import CurveParameters, ThresholdParameters
@@ -200,7 +200,7 @@ async def startup_event():
     check_or_create_self_participant(db)
 
 
-def start(port: int = 8000, db_file: str = "keyholder.db") -> None:
+def start(port: int = 8000, db_file: str = "data/keyholder.db") -> None:
     global engine, SessionLocal
     engine, SessionLocal = init_db(db_file)
     models.Base.metadata.create_all(bind=engine)

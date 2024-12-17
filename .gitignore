@@ -19,3 +19,11 @@ tmp
 eval/eval-*
 
 *.db
+
+# Data and database files
+data/*.db
+*.db
+
+# Keep data directory but ignore contents
+data/*
+!data/.gitkeep
