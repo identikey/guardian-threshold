@@ -152,6 +152,12 @@ class ClosedCommitmentList(BaseModel):
 def receive_closed_commitments(
     commitment_list: ClosedCommitmentList, db: Session = Depends(get_db)
 ):
+    """
+    This endpoint is used to receive closed commitments from other participants.
+    We write each one to the database.
+    We should verify that the commitment is valid and that the participant_id is in the list of participants.
+    Then we generate the public key and return it.
+    """
     for commitment in commitment_list.commitments:
         # Create a JSON string from the commitment data
         commitment_json = json.dumps(
@@ -188,7 +194,60 @@ def receive_closed_commitments(
         db.add(participant)
 
     db.commit()
-    return {"status": "Closed commitments received and stored"}
+
+    public_key = participant.public_key()
+    public_key_json = public_key.to_json()
+    logger.info(f"Generated public key: {public_key_json}")
+    return {
+        "status": "Closed commitments received and stored",
+        "public_key": public_key_json,
+    }
+
+
+@app.post("/generate_open_commitment")
+def generate_open_commitment(request: CommitmentRequest, db: Session = Depends(get_db)):
+    """
+    Generate and return the open commitment for this participant.
+    This should be called after all closed commitments have been received.
+    """
+    threshold_parameters = ThresholdParameters(request.t, request.n)
+    curve_parameters = CurveParameters()
+
+    # Get self participant
+    me = db.query(models.Participant).filter_by(is_self=True).first()
+    if not me:
+        raise HTTPException(status_code=404, detail="Self participant not found")
+
+    # Get all participants and their closed commitments
+    all_participants = db.query(models.Participant).all()
+    if any(p.closed_commitment is None for p in all_participants):
+        raise HTTPException(
+            status_code=400,
+            detail="Not all participants have submitted their closed commitments",
+        )
+
+    # Create participant instance
+    participant = tc.participant.Participant(
+        me.participant_id,
+        [p.participant_id for p in all_participants],
+        curve_parameters,
+        threshold_parameters,
+    )
+
+    # Load all closed commitments into the participant
+    for p in all_participants:
+        closed_commitment = tc.data.DkgClosedCommitment.from_json(p.closed_commitment)
+        participant.receive_closed_commitment(closed_commitment)
+
+    # Generate open commitment
+    open_commitment = participant.open_commitment()
+    open_commitment_json = open_commitment.to_json()
+    logger.info(f"Generated open commitment: {open_commitment_json}")
+
+    return {
+        "participant_id": me.participant_id,
+        "open_commitment": open_commitment_json,
+    }
 
 
 ### Entrypoint & Event Handlers ###
@@ -200,7 +259,9 @@ async def startup_event():
     check_or_create_self_participant(db)
 
 
-def start(port: int = 8000, db_file: str = "data/keyholder.db") -> None:
+def start(
+    port: int = 8000, host: str = "127.0.0.1", db_file: str = "data/keyholder.db"
+) -> None:
     global engine, SessionLocal
     engine, SessionLocal = init_db(db_file)
     models.Base.metadata.create_all(bind=engine)

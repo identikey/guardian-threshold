@@ -75,9 +75,12 @@ def perform_dkg(participant_urls: List[str], t: int, n: int):
 
     register_participants(participants, t, n)
 
+    # Each participant generates a closed commitment
     closed_commitments = generate_closed_commitments(participant_urls, t, n)
 
     # Distribute closed commitments to all participants
     distribute_closed_commitments(participants, closed_commitments)
+    # TODO: generate the public key
 
     logger.info("DKG orchestration completed")
+    # TODO: Output the computed public key

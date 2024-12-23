@@ -23,6 +23,7 @@ participants = [
     participant.Participant(id, participant_ids, cp, tp) for id in participant_ids
 ]
 
+# Closed Commitment Exchange
 # via broadcast
 for pi in participants:
     for pj in participants:
@@ -30,6 +31,7 @@ for pi in participants:
             closed_commitment = pj.closed_commitment()
             pi.receive_closed_commitment(closed_commitment)
 
+# Open Commitment Exchange
 # via broadcast
 for pi in participants:
     for pj in participants:

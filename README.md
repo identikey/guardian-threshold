@@ -1,6 +1,5 @@
 # Threshold Encryption
 
-# This repo aspires to be a full functional El Gamal threshold cryptography library
 
 ## High-level
 
@@ -17,11 +16,61 @@ Persistance for each running process is handled via SQLite.
 
 ### Run migrations
 
-`poetry run alembic` # TODO
+`uv run alembic` # TODO
 
 ## Credits
 
 Special thanks to @tompeterson, who originally authored the excellent library for the El Gamal-based threshold cryptography.
+
+
+## Threshold steps
+
+### DKG (Distributed Key Generation) Phase:
+1. **Setup**
+   - Set threshold parameters (t=3, n=5)
+   - Set curve parameters
+   - Generate random IDs for participants
+
+2. **Commitment Exchange** (2 rounds of broadcast)
+   - Round 1: Each participant broadcasts their closed commitments
+   - Round 2: Each participant broadcasts their open commitments
+
+3. **Public Key Generation**
+   - Compute the shared public key
+   - All participants should arrive at the same public key
+
+4. **Share Distribution**
+   - Each participant broadcasts their F_ij values
+   - Each participant secretly sends s_ij values to other participants
+   - Each participant computes their final share
+
+### Encryption/Decryption Process:
+1. **Encryption**
+   - Take a message and the public key
+   - Use `central.encrypt_message()` to encrypt
+   
+2. **Decryption**
+   - Collect partial decryptions from t participants (in this case, 3 out of 5)
+   - Each participant computes their partial decryption using their share
+   - Combine partial decryptions using `central.decrypt_message()`
+
+The commented-out code at the bottom shows a simplified version of the same process using the higher-level `threshold_crypto` API.
+
+Key Security Note: The s_ij values must be transmitted securely (privately) between participants, while other values can be broadcast publicly.
+
+# Notes
+
+The point_bytes are mapped randomly from the finite field of the elliptical curve and then hashed to derive the encryption key used to symmetrically encrypt the main ciphertext. Each individual participant comes together to form a single composite public key. 
+
+when decrypting, each participant generates a partial decryption. These partial decryptions require access to the c1 value in the Encrypted message. the central party then combines the partial decryptions to derive the point bytes, which is the point within the Galois field. From there the symmetric decryption key is derived that can then decrypt the main ciphertext from at the point of the central party. 
+
+Note that there appears to be a re-encryption mechanism built into this library, so explore that as a possibility for our proxy-recryption-service. 
+
+# Corner Cases To Handle
+
+During DKG, handle if a generated participant ID is a duplicate.
+
+---
 
 # Threshold cryptography library
 

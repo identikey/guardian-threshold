@@ -1,8 +1,8 @@
 import argparse
-import os  # Import os to set environment variables
-from identikey.server import start
-import threshold_crypto as tc
 import subprocess
+import requests
+import threshold_crypto as tc
+from identikey.server import start
 from identikey.dkg_orchestrator import perform_dkg  # Add this import
 
 
@@ -49,15 +49,20 @@ def main():
     )
 
     # Add run-server command
-    run_server_parser = subparsers.add_parser(
-        "run-server", help="Run the keyholder server"
-    )
+    run_server_parser = subparsers.add_parser("serve", help="Run the keyholder server")
     run_server_parser.add_argument(
         "--port",
         "-p",
         type=int,
         default=8000,
         help="Port to run the server on",
+    )
+    run_server_parser.add_argument(
+        "--bind",
+        "-b",
+        type=str,
+        default="127.0.0.1",
+        help="IP address to bind to (e.g. 127.0.0.1 or 0.0.0.0)",
     )
     run_server_parser.add_argument(
         "--db",  # New argument for database file
@@ -80,6 +85,19 @@ def main():
         help="Additional arguments to pass to Alembic, e.g. upgrade head",
     )
 
+    # Add info command
+    info_parser = subparsers.add_parser(
+        "info", 
+        help="Get information about a remote key guardian, including its participants and configuration"
+    )
+    info_parser.add_argument(
+        "--url",
+        "-u",
+        type=str,
+        default="http://127.0.0.1:8000",
+        help="URL of the remote key guardian server to query",
+    )
+
     args = parser.parse_args()
 
     if args.command == "dkg":
@@ -91,6 +109,7 @@ def main():
 
         perform_dkg(args.urls, args.threshold, n)
     elif args.command == "encrypt":
+        # TODO: Do this from our guardian servers
         # Example parameter generation
         curve_params = tc.CurveParameters()
         thresh_params = tc.ThresholdParameters(t=3, n=5)
@@ -99,7 +118,7 @@ def main():
         )
 
         encrypted_message = tc.encrypt_message(args.message, pub_key)
-        print(f"Encrypted message: {encrypted_message}")
+        print(f"Encrypted message: \n{encrypted_message}")
 
     elif args.command == "decrypt":
         # Example parameter setup (should match encryption parameters)
@@ -123,13 +142,18 @@ def main():
         )
         print(f"Decrypted message: {decrypted_message}")
 
-    elif args.command == "run-server":
-        start(port=args.port, db_file=args.db)
+    elif args.command == "serve":
+        start(port=args.port, host=args.bind, db_file=args.db)
 
     elif args.command == "migrate":
         db_url = f"sqlite:///./{args.db}"
         alembic_command = ["alembic", "-x", f"db_file={db_url}"] + args.alembic_args
         subprocess.run(alembic_command)
+    elif args.command == "info":
+        print(args.url)
+        url = args.url
+        response = requests.get(f"{url}/participants")
+        print(response.json())
 
 
 def retrieve_share(index):
